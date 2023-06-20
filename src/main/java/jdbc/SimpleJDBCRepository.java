@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +15,6 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-
 public class SimpleJDBCRepository {
 
     private final CustomDataSource dataSource = CustomDataSource.getInstance();
@@ -23,31 +23,12 @@ public class SimpleJDBCRepository {
     private PreparedStatement ps = null;
     private Statement st = null;
 
-    private static final String CREATE_USER_SQL = """
-            INSERT INTO myusers(
-            firstname, lastname, age)
-            VALUES (?, ?, ?);
-            """;
-    private static final String UPDATE_USER_SQL = """
-            UPDATE myusers
-            SET firstname=?, lastname=?, age=?
-            WHERE id = ?
-            """;
-    private static final String DELETE_USER = """
-            DELETE FROM public.myusers
-            WHERE id = ?
-            """;
-    private static final String FIND_USER_BY_ID_SQL = """
-            SELECT id, firstname, lastname, age FROM myusers
-            WHERE id = ?
-            """;
-    private static final String FIND_USER_BY_NAME_SQL = """
-            SELECT id, firstname, lastname, age FROM myusers
-            WHERE firstname LIKE CONCAT('%', ?, '%')
-            """;
-    private static final String FIND_ALL_USER_SQL = """
-            SELECT id, firstname, lastname, age FROM myusers
-            """;
+    private static final String CREATE_USER_SQL = "INSERT INTO myusers(firstname, lastname, age) VALUES (?, ?, ?);";
+    private static final String UPDATE_USER_SQL = "UPDATE myusers SET firstname=?, lastname=?, age=? WHERE id = ?";
+    private static final String DELETE_USER = "DELETE FROM myusers WHERE id = ?";
+    private static final String FIND_USER_BY_ID_SQL = "SELECT id, firstname, lastname, age FROM myusers WHERE id = ?";
+    private static final String FIND_USER_BY_NAME_SQL = "SELECT id, firstname, lastname, age FROM myusers WHERE firstname LIKE CONCAT('%', ?, '%')";
+    private static final String FIND_ALL_USER_SQL = "SELECT id, firstname, lastname, age FROM myusers";
 
     public Long createUser(User user) {
 
@@ -80,7 +61,7 @@ public class SimpleJDBCRepository {
             statement.setLong(1, userId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                user = map(resultSet);
+                user = resultSetToUser(resultSet);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -98,7 +79,7 @@ public class SimpleJDBCRepository {
             statement.setString(1, userName);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                user = map(resultSet);
+                user = resultSetToUser(resultSet);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -116,7 +97,7 @@ public class SimpleJDBCRepository {
              var statement = conn.prepareStatement(FIND_ALL_USER_SQL)) {
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
-                users.add(map(resultSet));
+                users.add(resultSetToUser(resultSet));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -157,15 +138,14 @@ public class SimpleJDBCRepository {
 
     }
 
-    private User map(ResultSet rs) throws SQLException {
+    private User resultSetToUser(ResultSet resultSet) throws SQLException {
 
         return User.builder()
-                .id(rs.getLong("id"))
-                .firstName(rs.getString("firstname"))
-                .lastName(rs.getString("lastname"))
-                .age(rs.getInt("age"))
+                .id(resultSet.getLong("id"))
+                .firstName(resultSet.getString("firstname"))
+                .lastName(resultSet.getString("lastname"))
+                .age(resultSet.getInt("age"))
                 .build();
 
     }
-
 }
